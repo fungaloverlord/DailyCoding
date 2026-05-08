@@ -238,14 +238,35 @@
 </style>
 
 <!-- ─── Script ──────────────────────────────────────────────────────────────── -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"
-        integrity="sha512-vc58zeoONBCkfGnl2SWIF/6BIhpinZQkMlRIfhYvJWk2IHK8AMlwHrNUmKD3+lmNHSJR5Vw2kbBHJVPKaHnQ=="
-        crossorigin="anonymous"
-        referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 
 <script>
 (function () {
   "use strict";
+
+  // Guard: if D3 blocked by CSP or integrity check, retry from unpkg then bail.
+  function waitForD3(cb, attempts) {
+    if (typeof d3 !== "undefined") { cb(); return; }
+    if (attempts <= 0) {
+      console.error("[graph-aside] D3 could not be loaded — check network / CSP.");
+      var wrap = document.getElementById("graph-canvas-wrap");
+      if (wrap) wrap.innerHTML =
+        '<p class="graph-empty" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;margin:0;opacity:.5;">'
+        + 'D3 failed to load — check network or Content Security Policy</p>';
+      return;
+    }
+    if (attempts === 3) {
+      // First retry: fallback CDN
+      var s = document.createElement("script");
+      s.src = "https://unpkg.com/d3@7/dist/d3.min.js";
+      document.head.appendChild(s);
+    }
+    setTimeout(function () { waitForD3(cb, attempts - 1); }, 400);
+  }
+
+  waitForD3(init, 3);
+
+  function init() {
 
   // ── Config ────────────────────────────────────────────────────────────────
   const GRAPH_JSON = "{{ '/assets/graph.json' | relative_url }}";
@@ -525,6 +546,8 @@
   function truncate(str, max) {
     return str && str.length > max ? str.slice(0, max - 1) + "…" : str;
   }
+
+  } // end init()
 
 })();
 </script>
